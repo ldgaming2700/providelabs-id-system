@@ -1,7 +1,14 @@
 <x-layouts.app title="Cardholders - ProvideLabs ID System">
     <div class="page-title">
-        <div><h1>Cardholders</h1><p>Search, edit, generate, print, and release IDs.</p></div>
-        <a href="{{ route('cardholders.create') }}" class="btn">Register New</a>
+        <div>
+            <h1>Cardholders</h1>
+            <p>Search, edit, generate, print, and release IDs.</p>
+        </div>
+
+        <div class="actions-row">
+            <a href="{{ route('cardholders.import') }}" class="btn secondary">Batch Import</a>
+            <a href="{{ route('cardholders.create') }}" class="btn">Register New</a>
+        </div>
     </div>
 
     <div class="card" style="margin-bottom: 18px;">
