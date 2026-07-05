@@ -45,8 +45,8 @@ class Cardholder extends Model
     {
     if (! $this->photo_path) {
         return null;
-        }
-    
+    }
+
     return route('cardholders.photo', $this);
     }
 

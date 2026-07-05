@@ -5,6 +5,7 @@ use App\Http\Controllers\CardGenerationController;
 use App\Http\Controllers\CardholderController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Response;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : redirect()->route('login'));
 
