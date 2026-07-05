@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Http\Response;
+
 
 class CardholderController extends Controller
 {
@@ -47,6 +49,19 @@ class CardholderController extends Controller
             'cardholder' => new Cardholder(),
             'cardTypes' => CardType::where('is_active', true)->orderBy('name')->get(),
         ]);
+    }
+    
+    public function photo(Cardholder $cardholder): Response
+    {
+        abort_unless($cardholder->photo_path, 404);
+    
+        $disk = Storage::disk(config('filesystems.default'));
+    
+        abort_unless($disk->exists($cardholder->photo_path), 404);
+    
+        return response($disk->get($cardholder->photo_path), 200)
+            ->header('Content-Type', $disk->mimeType($cardholder->photo_path) ?: 'image/jpeg')
+            ->header('Cache-Control', 'private, max-age=3600');
     }
 
     public function store(Request $request): RedirectResponse
@@ -172,12 +187,16 @@ class CardholderController extends Controller
             $path = $this->saveCapturedPhoto($request->input('captured_photo'), $cardholder->id_no);
         } elseif ($request->hasFile('photo_upload')) {
             $extension = $request->file('photo_upload')->extension() ?: 'jpg';
-            $path = $request->file('photo_upload')->storeAs('cardholder-photos', $cardholder->id_no . '.' . $extension, 'public');
+            $path = $request->file('photo_upload')->storeAs(
+                'cardholder-photos',
+                $cardholder->id_no . '.' . $extension,
+                config('filesystems.default')
+            );
         }
 
         if ($path) {
             if ($cardholder->photo_path && $cardholder->photo_path !== $path) {
-                Storage::disk('public')->delete($cardholder->photo_path);
+                Storage::disk(config('filesystems.default'))->delete($cardholder->photo_path);
             }
 
             $cardholder->update([
@@ -201,7 +220,7 @@ class CardholderController extends Controller
         }
 
         $path = 'cardholder-photos/' . $idNo . '.jpg';
-        Storage::disk('public')->put($path, $binary);
+        Storage::disk(config('filesystems.default'))->put($path, $binary);
 
         return $path;
     }

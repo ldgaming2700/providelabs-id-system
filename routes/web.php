@@ -16,6 +16,8 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/cardholders/{cardholder}/photo', [CardholderController::class, 'photo'])
+    ->name('cardholders.photo');
     Route::resource('cardholders', CardholderController::class);
     Route::get('/cardholders/{cardholder}/generate', [CardGenerationController::class, 'show'])->name('cardholders.generate');
     Route::post('/cardholders/{cardholder}/mark-generated', [CardholderController::class, 'markGenerated'])->name('cardholders.mark-generated');

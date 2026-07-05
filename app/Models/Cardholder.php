@@ -43,7 +43,11 @@ class Cardholder extends Model
 
     public function getPhotoUrlAttribute(): ?string
     {
-        return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
+    if (! $this->photo_path) {
+        return null;
+        }
+    
+    return route('cardholders.photo', $this);
     }
 
     public function hasUploadedPhoto(): bool
