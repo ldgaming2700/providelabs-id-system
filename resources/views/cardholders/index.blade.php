@@ -31,13 +31,14 @@
 
     <div class="card table-wrap">
         <table>
-            <thead><tr><th>ID No</th><th>Name</th><th>Card Type</th><th>Photo</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>ID No</th><th>Name</th><th>Card Type</th><th>Encoded By</th><th>Photo</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
                 @forelse ($cardholders as $cardholder)
                     <tr>
                         <td><strong>{{ $cardholder->id_no }}</strong></td>
                         <td>{{ $cardholder->name }}</td>
                         <td>{{ $cardholder->cardType->name }}</td>
+                        <td>{{ $cardholder->encoder->name ?? 'Unknown' }}</td>
                         <td>{{ $cardholder->photo_status === 'uploaded' ? 'Uploaded' : 'Placeholder' }}</td>
                         <td><span class="badge {{ $cardholder->status }}">{{ str_replace('_', ' ', strtoupper($cardholder->status)) }}</span></td>
                         <td>

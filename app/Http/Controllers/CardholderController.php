@@ -9,16 +9,17 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 
 class CardholderController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Cardholder::query()->with('cardType');
+        $query = Cardholder::query()->with(['cardType', 'encoder']);
 
         if ($search = $request->string('search')->trim()->toString()) {
             $query->where(function ($q) use ($search) {
@@ -70,8 +71,13 @@ class CardholderController extends Controller
         $data['registered_by'] = Auth::id();
         $data['photo_status'] = 'placeholder';
 
-        $cardholder = Cardholder::create($data);
-        $this->savePhotoIfPresent($request, $cardholder);
+        $cardholder = DB::transaction(function () use ($data) {
+        $data['id_no'] = $this->generateNextIdNo();
+
+        return Cardholder::create($data);
+        });
+
+$this->savePhotoIfPresent($request, $cardholder);
 
         AuditLog::create([
             'user_id' => Auth::id(),
@@ -163,7 +169,6 @@ class CardholderController extends Controller
     {
         return $request->validate([
             'card_type_id' => ['required', 'exists:card_types,id'],
-            'id_no' => ['required', 'string', 'max:20', Rule::unique('cardholders', 'id_no')->ignore($cardholder?->id)],
             'name' => ['required', 'string', 'max:255'],
             'sc_id' => ['nullable', 'string', 'max:100'],
             'philhealth' => ['nullable', 'string', 'max:100'],
@@ -234,5 +239,64 @@ class CardholderController extends Controller
             'released' => 'Released',
             'for_correction' => 'For Correction',
         ];
+    }
+
+    private function generateNextIdNo(): string
+{
+    $prefix = now()->format('y');
+
+    $latestNumber = Cardholder::query()
+        ->where('id_no', 'like', $prefix . '-%')
+        ->lockForUpdate()
+        ->get(['id_no'])
+        ->map(function (Cardholder $cardholder) {
+            if (preg_match('/^\d{2}-(\d{5})$/', $cardholder->id_no, $matches)) {
+                return (int) $matches[1];
+            }
+
+            return 0;
+        })
+        ->max();
+
+    $nextNumber = ((int) $latestNumber) + 1;
+
+    return $prefix . '-' . str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
+}
+
+    public function checkName(Request $request): JsonResponse
+    {
+        $name = trim((string) $request->query('name', ''));
+        $excludeId = $request->integer('exclude');
+
+        if (strlen($name) < 3) {
+            return response()->json([
+                'match' => false,
+                'matches' => [],
+            ]);
+        }
+
+        $normalizedName = strtoupper(preg_replace('/\s+/', ' ', $name));
+        $tokens = collect(explode(' ', $normalizedName))
+            ->filter(fn ($token) => strlen($token) >= 3)
+            ->take(4)
+            ->values();
+
+        $matches = Cardholder::query()
+            ->select('id', 'id_no', 'name')
+            ->when($excludeId, fn ($query) => $query->where('id', '!=', $excludeId))
+            ->where(function ($query) use ($normalizedName, $tokens) {
+                $query->whereRaw('UPPER(name) = ?', [$normalizedName]);
+
+                foreach ($tokens as $token) {
+                    $query->orWhereRaw('UPPER(name) LIKE ?', ['%' . $token . '%']);
+                }
+            })
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'match' => $matches->isNotEmpty(),
+            'matches' => $matches,
+        ]);
     }
 }

@@ -5,13 +5,34 @@ namespace App\Http\Controllers;
 use App\Models\Cardholder;
 use App\Models\CardType;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function __invoke(): View
     {
+        $totalRecords = Cardholder::count();
+
+        $encoderStats = Cardholder::query()
+            ->with('encoder')
+            ->select('registered_by', DB::raw('COUNT(*) as entries_count'))
+          ->groupBy('registered_by')
+            ->orderByDesc('entries_count')
+            ->get()
+            ->map(function ($row) use ($totalRecords) {
+                $count = (int) $row->entries_count;
+
+                return [
+                    'name' => $row->encoder->name ?? 'Unknown Encoder',
+                    'count' => $count,
+                    'percentage' => $totalRecords > 0
+                        ? round(($count / $totalRecords) * 100, 1)
+                        : 0,
+                ];
+            });
+
         return view('dashboard', [
-            'totalRecords' => Cardholder::count(),
+            'totalRecords' => $totalRecords,
             'pending' => Cardholder::where('status', 'pending')->count(),
             'generated' => Cardholder::where('status', 'generated')->count(),
             'printed' => Cardholder::where('status', 'printed')->count(),
@@ -19,6 +40,7 @@ class DashboardController extends Controller
             'placeholders' => Cardholder::where('photo_status', 'placeholder')->count(),
             'cardTypes' => CardType::withCount('cardholders')->orderBy('name')->get(),
             'recentCardholders' => Cardholder::with('cardType')->latest()->limit(8)->get(),
+            'encoderStats' => $encoderStats,
         ]);
     }
 }

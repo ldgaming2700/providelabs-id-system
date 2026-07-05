@@ -16,6 +16,26 @@
         <div class="card stat"><span>Photo Placeholders</span><strong>{{ $placeholders }}</strong></div>
     </div>
 
+    <div class="card" style="margin-bottom: 20px;">
+        <h2>Encoding Share by Encoder</h2>
+        <p style="color: #64748b;">Percentage of total records encoded by each user.</p>
+
+        @forelse ($encoderStats as $stat)
+            <div style="margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px;">
+                    <strong>{{ $stat['name'] }}</strong>
+                    <span>{{ $stat['count'] }} records · {{ $stat['percentage'] }}%</span>
+                </div>
+
+                <div style="height: 18px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                    <div style="height: 18px; width: {{ $stat['percentage'] }}%; background: linear-gradient(90deg, #DE6900, #63C7D1); border-radius: 999px;"></div>
+                </div>
+            </div>
+        @empty
+            <p>No encoded records yet.</p>
+        @endforelse
+    </div>
+
     <div class="grid grid-2">
         <div class="card">
             <h2>Records by Card Type</h2>

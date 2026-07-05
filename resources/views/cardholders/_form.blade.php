@@ -12,15 +12,36 @@
     </div>
 
     <div class="field">
-        <label for="id_no">ID NO</label>
-        <input id="id_no" name="id_no" value="{{ old('id_no', $cardholder->id_no) }}" placeholder="26-00320" required>
-        @error('id_no') <div class="error">{{ $message }}</div> @enderror
+        <label for="id_no_display">ID NO</label>
+
+        <input
+            id="id_no_display"
+            value="{{ $cardholder->exists ? $cardholder->id_no : 'Auto-generated after saving' }}"
+            disabled
+        >
+
+        <small style="color: #64748b;">
+        ID number is automatically generated and cannot be changed by encoders.
+        </small>
     </div>
 
     <div class="field full">
         <label for="name">Name</label>
-        <input id="name" name="name" value="{{ old('name', $cardholder->name) }}" required>
-        @error('name') <div class="error">{{ $message }}</div> @enderror
+
+        <input
+            id="name"
+            name="name"
+            value="{{ old('name', $cardholder->name) }}"
+            required
+            data-name-check-url="{{ route('cardholders.check-name') }}"
+            data-current-cardholder-id="{{ $cardholder->id }}"
+        >
+
+        <div id="name-warning" class="error" hidden></div>
+
+        @error('name')
+            <div class="error">{{ $message }}</div>
+        @enderror
     </div>
 
     <div class="field">
@@ -106,3 +127,4 @@
 </div>
 
 <script src="{{ asset('assets/camera-capture.js') }}"></script>
+<script src="{{ asset('assets/duplicate-name-check.js') }}"></script>
