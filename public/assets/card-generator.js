@@ -137,116 +137,143 @@
 
     async function drawFront() {
         setupCanvas(frontCanvas);
-
+    
         const ctx = frontCanvas.getContext('2d');
         ctx.clearRect(0, 0, CARD_W, CARD_H);
-
+    
         const template = await loadImage(getTemplatePath('front'));
-
+    
         if (template) {
             ctx.drawImage(template, 0, 0, CARD_W, CARD_H);
         } else {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, CARD_W, CARD_H);
-
+    
             ctx.fillStyle = '#DE6900';
             ctx.font = 'bold 28px Arial';
             ctx.fillText('Missing front template PNG', 40, 70);
         }
-
+    
         /*
-            FRONT PHOTO COORDINATES
-            Based on your Photoshop template.
-            Adjust only these values if the photo is misaligned.
+            PHOTO
+            These match your front layout fairly closely.
+            Adjust only if the photo is slightly off.
         */
         const photoX = 57;
         const photoY = 222;
         const photoW = 312;
         const photoH = 312;
-
+    
         const photo = await loadPhoto(payload.photo_url);
-
+    
         if (photo) {
             drawCroppedImage(ctx, photo, photoX, photoY, photoW, photoH);
         } else {
             drawWhitePhotoPlaceholder(ctx, photoX, photoY, photoW, photoH);
         }
-
+    
         ctx.fillStyle = '#000000';
-        ctx.textBaseline = 'alphabetic';
-
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
+    
+        function fitLeftText(text, x, y, maxWidth, startingFontSize, minFontSize = 18) {
+            let fontSize = startingFontSize;
+            const value = String(text || '');
+    
+            do {
+                ctx.font = `bold ${fontSize}px Arial`;
+    
+                if (ctx.measureText(value).width <= maxWidth) {
+                    break;
+                }
+    
+                fontSize -= 1;
+            } while (fontSize >= minFontSize);
+    
+            ctx.fillText(value, x, y);
+        }
+    
         /*
-            ID NO
+            IMPORTANT:
+            The template already contains the labels.
+            So below, we draw ONLY the values.
         */
-        ctx.font = 'bold 42px Arial';
-        ctx.fillText(`ID NO. ${payload.id_no || ''}`, 435, 162);
-
-        /*
-            NAME
-        */
-        ctx.font = 'bold 27px Arial';
-        fitText(
-            ctx,
-            String(payload.name || '').toUpperCase(),
-            436,
-            222,
-            480,
-            27,
-            18,
-            'Arial',
-            'bold'
+    
+        // ID NO value
+        fitLeftText(
+            payload.id_no || '',
+            560,
+            150,
+            230,
+            28,
+            18
         );
-
-        /*
-            SC ID
-        */
-        ctx.font = 'bold 27px Arial';
-        ctx.fillText(`SC ID# ${payload.sc_id || ''}`, 436, 282);
-
-        /*
-            PHILHEALTH
-        */
-        ctx.font = 'bold 27px Arial';
-        ctx.fillText(`PHILHEALTH ${payload.philhealth || ''}`, 436, 342);
-
-        /*
-            CELLPHONE NO.
-        */
-        ctx.font = 'bold 27px Arial';
-        ctx.fillText(`CELLPHONE NO. ${payload.cellphone_no || ''}`, 436, 402);
-
-        /*
-            ADDRESS
-        */
-        ctx.font = 'bold 27px Arial';
-        ctx.fillText('ADDRESS', 436, 452);
-
-        ctx.font = 'bold 25px Arial';
+    
+        // NAME value
+        fitLeftText(
+            String(payload.name || '').toUpperCase(),
+            520,
+            210,
+            400,
+            26,
+            16
+        );
+    
+        // SC ID value
+        fitLeftText(
+            payload.sc_id || '',
+            560,
+            271,
+            300,
+            26,
+            16
+        );
+    
+        // PHILHEALTH value
+        fitLeftText(
+            payload.philhealth || '',
+            630,
+            331,
+            250,
+            26,
+            16
+        );
+    
+        // CELLPHONE NO value
+        fitLeftText(
+            payload.cellphone_no || '',
+            650,
+            390,
+            250,
+            24,
+            16
+        );
+    
+        // ADDRESS value
+        ctx.font = 'bold 22px Arial';
         wrapText(
             ctx,
             String(payload.address || '').toUpperCase(),
-            436,
-            482,
+            438,
+            465,
             500,
-            28,
+            30,
             2
         );
-
-        /*
-            POSITION
-        */
-        ctx.font = 'bold 27px Arial';
-        fitText(
-            ctx,
-            `POSITION ${String(payload.position || '').toUpperCase()}`,
-            436,
-            562,
-            480,
-            27,
-            18,
-            'Arial',
-            'bold'
+    
+        // POSITION value
+        fitLeftText(
+            String(payload.position || '').toUpperCase(),
+            620,
+            555,
+            240,
+            24,
+            16
         );
+    
+        // Reset
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
     }
 
     async function drawBack() {
