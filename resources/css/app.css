@@ -99,3 +99,21 @@
         transform: rotate(360deg);
     }
 }
+
+/* Fix oversized Laravel pagination arrows */
+nav[role="navigation"] svg,
+nav[aria-label="Pagination Navigation"] svg {
+    width: 18px !important;
+    height: 18px !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+nav[role="navigation"] a,
+nav[role="navigation"] span {
+    font-size: 14px;
+}
+
+nav[role="navigation"] {
+    margin-top: 20px;
+}
