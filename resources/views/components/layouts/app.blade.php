@@ -8,6 +8,17 @@
     <link rel="stylesheet" href="{{ asset('assets/providelabs.css') }}">
 </head>
 <body>
+    <div id="global-loader" class="global-loader" hidden>
+        <div class="loader-card">
+            <div class="providelabs-gear">
+                <div class="gear-center"></div>
+            </div>
+
+            <div class="loader-text">Processing, please wait...</div>
+            <div class="loader-subtext">Do not close or refresh this page.</div>
+        </div>
+    </div>
+    
     @auth
         <header class="topbar">
             <div class="topbar-inner">
@@ -34,5 +45,6 @@
         @endif
         {{ $slot }}
     </main>
+    <script src="{{ asset('assets/global-loader.js') }}"></script>
 </body>
 </html>

@@ -9,3 +9,93 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+.link-danger {
+    color: #b91c1c;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.link-danger:hover {
+    text-decoration: underline;
+}
+
+.global-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(8px);
+}
+
+.global-loader[hidden] {
+    display: none;
+}
+
+.loader-card {
+    width: min(360px, calc(100vw - 40px));
+    padding: 32px 28px;
+    border-radius: 28px;
+    background: #ffffff;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+    text-align: center;
+}
+
+.providelabs-gear {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    margin: 0 auto 18px;
+    border-radius: 24px;
+    background: conic-gradient(
+        from 0deg,
+        #de6900,
+        #f59e0b,
+        #63c7d1,
+        #de6900
+    );
+    animation: providelabs-spin 1.1s linear infinite;
+}
+
+.providelabs-gear::before,
+.providelabs-gear::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: 28px;
+    background: inherit;
+    z-index: -1;
+    opacity: 0.55;
+}
+
+.providelabs-gear::after {
+    transform: rotate(45deg);
+}
+
+.gear-center {
+    position: absolute;
+    inset: 22px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 8px rgba(99, 199, 209, 0.18);
+}
+
+.loader-text {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.loader-subtext {
+    margin-top: 6px;
+    font-size: 14px;
+    color: #64748b;
+}
+
+@keyframes providelabs-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

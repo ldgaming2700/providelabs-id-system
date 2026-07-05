@@ -53,6 +53,25 @@
                                 <a href="{{ route('cardholders.show', $cardholder) }}">View</a>
                                 <a href="{{ route('cardholders.edit', $cardholder) }}">Edit</a>
                                 <a href="{{ route('cardholders.generate', $cardholder) }}">Generate</a>
+                                @if (auth()->user()?->role === 'admin')
+                                <form
+                                    method="POST"
+                                    action="{{ route('cardholders.destroy', $cardholder) }}"
+                                    style="display: inline;"
+                                    onsubmit="return confirm('Are you sure you want to delete {{ $cardholder->id_no }} - {{ $cardholder->name }}? This cannot be undone.');"
+                                    >
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button
+                                        type="submit"
+                                        class="link-danger"
+                                        style="background: none; border: none; padding: 0; cursor: pointer;"
+                                        >
+                                        Delete
+                                    </button>
+                                </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

@@ -299,4 +299,32 @@ $this->savePhotoIfPresent($request, $cardholder);
             'matches' => $matches,
         ]);
     }
+
+    public function destroy(Cardholder $cardholder): RedirectResponse
+    {
+        abort_unless(Auth::user()?->role === 'admin', 403);
+
+        $idNo = $cardholder->id_no;
+        $photoPath = $cardholder->photo_path;
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'cardholder_id' => $cardholder->id,
+            'action' => 'cardholder.deleted',
+            'metadata' => [
+                'id_no' => $idNo,
+                'name' => $cardholder->name,
+            ],
+        ]);
+
+        $cardholder->delete();
+
+        if ($photoPath) {
+            Storage::disk(config('filesystems.default'))->delete($photoPath);
+        }
+
+        return redirect()
+            ->route('cardholders.index')
+            ->with('success', "Cardholder {$idNo} has been deleted.");
+    }
 }
