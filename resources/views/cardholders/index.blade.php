@@ -80,6 +80,8 @@
                 @endforelse
             </tbody>
         </table>
-        <div style="margin-top: 16px;">{{ $cardholders->links() }}</div>
+        <div class="pagination-wrap">
+        {{ $cardholders->onEachSide(1)->links('pagination::simple-default') }}  
+        </div>
     </div>
 </x-layouts.app>

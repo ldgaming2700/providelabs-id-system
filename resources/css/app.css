@@ -117,3 +117,18 @@ nav[role="navigation"] span {
 nav[role="navigation"] {
     margin-top: 20px;
 }
+
+.pagination-wrap {
+    margin-top: 20px;
+}
+
+.pagination-wrap nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pagination-wrap a,
+.pagination-wrap span {
+    font-size: 14px;
+}
