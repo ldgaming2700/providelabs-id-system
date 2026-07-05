@@ -6,6 +6,7 @@ use App\Http\Controllers\CardholderController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Response;
+use App\Http\Controllers\CardholderImportController;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : redirect()->route('login'));
 
@@ -21,6 +22,10 @@ Route::middleware('auth')->group(function () {
     ->name('cardholders.check-name');
     Route::get('/cardholders/{cardholder}/photo', [CardholderController::class, 'photo'])
     ->name('cardholders.photo');
+    Route::get('/cardholders-import', [CardholderImportController::class, 'create'])
+    ->name('cardholders.import');
+    Route::post('/cardholders-import', [CardholderImportController::class, 'store'])
+    ->name('cardholders.import.store');
     Route::resource('cardholders', CardholderController::class);
     Route::get('/cardholders/{cardholder}/generate', [CardGenerationController::class, 'show'])->name('cardholders.generate');
     Route::post('/cardholders/{cardholder}/mark-generated', [CardholderController::class, 'markGenerated'])->name('cardholders.mark-generated');
