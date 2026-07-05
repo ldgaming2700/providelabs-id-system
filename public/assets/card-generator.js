@@ -251,54 +251,103 @@
 
     async function drawBack() {
         setupCanvas(backCanvas);
-
+    
         const ctx = backCanvas.getContext('2d');
         ctx.clearRect(0, 0, CARD_W, CARD_H);
-
+    
         const template = await loadImage(getTemplatePath('back'));
-
+    
         if (template) {
             ctx.drawImage(template, 0, 0, CARD_W, CARD_H);
         } else {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, CARD_W, CARD_H);
-
+    
             ctx.fillStyle = '#DE6900';
             ctx.font = 'bold 28px Arial';
             ctx.fillText('Missing back template PNG', 40, 70);
         }
-
+    
         ctx.fillStyle = '#000000';
-        ctx.textBaseline = 'alphabetic';
-
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+    
+        function fitCenteredText(text, centerX, centerY, maxWidth, startingFontSize, minFontSize = 18) {
+            let fontSize = startingFontSize;
+            const value = String(text || '');
+    
+            do {
+                ctx.font = `bold ${fontSize}px Arial`;
+    
+                if (ctx.measureText(value).width <= maxWidth) {
+                    break;
+                }
+    
+                fontSize -= 1;
+            } while (fontSize >= minFontSize);
+    
+            ctx.fillText(value, centerX, centerY);
+        }
+    
         /*
-            BACK TEXT COORDINATES
-            These are starter coordinates.
-            Adjust them based on your BACK.psd blank template.
+            BACK TEMPLATE COORDINATES
+            These match the correct back-card layout you sent.
+            The template already contains the labels.
+            The script only draws the values.
         */
-
-        ctx.font = 'bold 32px Arial';
-        ctx.fillText(`ID NO. ${payload.id_no || ''}`, 90, 170);
-
-        ctx.font = 'bold 28px Arial';
-        ctx.fillText(`BIRTHDAY: ${payload.birthday || ''}`, 90, 245);
-
-        ctx.font = 'bold 28px Arial';
-        ctx.fillText(`AGE: ${payload.age || ''}`, 90, 300);
-
+    
+        // Birthday value — left white box
+        fitCenteredText(
+            payload.birthday || '',
+            275,
+            195,
+            390,
+            28,
+            18
+        );
+    
+        // Age value — right white box
+        fitCenteredText(
+            payload.age || '',
+            735,
+            195,
+            390,
+            28,
+            18
+        );
+    
+        // Emergency contact person — middle white box
+        fitCenteredText(
+            String(payload.contact_name || '').toUpperCase(),
+            506,
+            319,
+            500,
+            28,
+            18
+        );
+    
+        // Emergency contact number — lower white box
+        fitCenteredText(
+            payload.emergency_contact_number || '',
+            506,
+            450,
+            500,
+            28,
+            18
+        );
+    
+        // ID number — bottom-right corner
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'alphabetic';
         ctx.font = 'bold 28px Arial';
         ctx.fillText(
-            `CONTACT PERSON: ${String(payload.contact_name || '').toUpperCase()}`,
-            90,
-            375
+            payload.id_no || '',
+            870,
+            610
         );
-
-        ctx.font = 'bold 28px Arial';
-        ctx.fillText(
-            `NUMBER: ${payload.emergency_contact_number || ''}`,
-            90,
-            430
-        );
+    
+        // Reset alignment so other functions are not affected
+        ctx.textAlign = 'left';
     }
 
     function downloadCanvas(canvas, filename) {
