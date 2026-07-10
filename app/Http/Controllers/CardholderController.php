@@ -5,20 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Cardholder;
 use App\Models\CardType;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
-
 
 class CardholderController extends Controller
 {
     public function index(Request $request): View
     {
+        abort_unless($this->isAdmin(), 403);
+
         $query = Cardholder::query()->with(['cardType', 'encoder']);
 
         if ($search = $request->string('search')->trim()->toString()) {
@@ -51,19 +52,6 @@ class CardholderController extends Controller
             'cardTypes' => CardType::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
-    
-    public function photo(Cardholder $cardholder): Response
-    {
-        abort_unless($cardholder->photo_path, 404);
-    
-        $disk = Storage::disk(config('filesystems.default'));
-    
-        abort_unless($disk->exists($cardholder->photo_path), 404);
-    
-        return response($disk->get($cardholder->photo_path), 200)
-            ->header('Content-Type', $disk->mimeType($cardholder->photo_path) ?: 'image/jpeg')
-            ->header('Cache-Control', 'private, max-age=3600');
-    }
 
     public function store(Request $request): RedirectResponse
     {
@@ -72,12 +60,12 @@ class CardholderController extends Controller
         $data['photo_status'] = 'placeholder';
 
         $cardholder = DB::transaction(function () use ($data) {
-        $data['id_no'] = $this->generateNextIdNo();
+            $data['id_no'] = $this->generateNextIdNo();
 
-        return Cardholder::create($data);
+            return Cardholder::create($data);
         });
 
-$this->savePhotoIfPresent($request, $cardholder);
+        $this->savePhotoIfPresent($request, $cardholder);
 
         AuditLog::create([
             'user_id' => Auth::id(),
@@ -86,17 +74,26 @@ $this->savePhotoIfPresent($request, $cardholder);
             'metadata' => ['id_no' => $cardholder->id_no],
         ]);
 
-        return redirect()->route('cardholders.show', $cardholder)->with('success', 'Cardholder record created.');
+        return redirect()
+            ->route('cardholders.generate', $cardholder)
+            ->with('success', 'Cardholder record created.');
     }
 
     public function show(Cardholder $cardholder): View
     {
+        $this->ensureCanAccessCardholder($cardholder);
+
         $cardholder->load('cardType', 'encoder');
-        return view('cardholders.show', ['cardholder' => $cardholder]);
+
+        return view('cardholders.show', [
+            'cardholder' => $cardholder,
+        ]);
     }
 
     public function edit(Cardholder $cardholder): View
     {
+        $this->ensureCanAccessCardholder($cardholder);
+
         return view('cardholders.edit', [
             'cardholder' => $cardholder,
             'cardTypes' => CardType::where('is_active', true)->orderBy('name')->get(),
@@ -105,7 +102,10 @@ $this->savePhotoIfPresent($request, $cardholder);
 
     public function update(Request $request, Cardholder $cardholder): RedirectResponse
     {
+        $this->ensureCanAccessCardholder($cardholder);
+
         $data = $this->validatedData($request, $cardholder);
+
         $cardholder->update($data);
         $this->savePhotoIfPresent($request, $cardholder);
 
@@ -116,26 +116,121 @@ $this->savePhotoIfPresent($request, $cardholder);
             'metadata' => ['id_no' => $cardholder->id_no],
         ]);
 
-        return redirect()->route('cardholders.show', $cardholder)->with('success', 'Cardholder record updated.');
+        return redirect()
+            ->route($this->isAdmin() ? 'cardholders.show' : 'cardholders.generate', $cardholder)
+            ->with('success', 'Cardholder record updated.');
+    }
+
+    public function destroy(Cardholder $cardholder): RedirectResponse
+    {
+        abort_unless($this->isAdmin(), 403);
+
+        $idNo = $cardholder->id_no;
+        $name = $cardholder->name;
+        $photoPath = $cardholder->photo_path;
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'cardholder_id' => $cardholder->id,
+            'action' => 'cardholder.deleted',
+            'metadata' => [
+                'id_no' => $idNo,
+                'name' => $name,
+            ],
+        ]);
+
+        $cardholder->delete();
+
+        if ($photoPath) {
+            Storage::disk(config('filesystems.default'))->delete($photoPath);
+        }
+
+        return redirect()
+            ->route('cardholders.index')
+            ->with('success', "Cardholder {$idNo} has been deleted.");
+    }
+
+    public function photo(Cardholder $cardholder): Response
+    {
+        $this->ensureCanAccessCardholder($cardholder);
+
+        abort_unless($cardholder->photo_path, 404);
+
+        $disk = Storage::disk(config('filesystems.default'));
+
+        abort_unless($disk->exists($cardholder->photo_path), 404);
+
+        return response($disk->get($cardholder->photo_path), 200)
+            ->header('Content-Type', $disk->mimeType($cardholder->photo_path) ?: 'image/jpeg')
+            ->header('Cache-Control', 'private, max-age=3600');
+    }
+
+    public function checkName(Request $request): JsonResponse
+    {
+        $name = trim((string) $request->query('name', ''));
+        $excludeId = $request->integer('exclude');
+
+        if (strlen($name) < 3) {
+            return response()->json([
+                'match' => false,
+                'matches' => [],
+            ]);
+        }
+
+        $normalizedName = strtoupper(preg_replace('/\s+/', ' ', $name));
+
+        $tokens = collect(explode(' ', $normalizedName))
+            ->filter(fn ($token) => strlen($token) >= 3)
+            ->take(4)
+            ->values();
+
+        $matches = Cardholder::query()
+            ->select('id', 'id_no', 'name')
+            ->when($excludeId, fn ($query) => $query->where('id', '!=', $excludeId))
+            ->where(function ($query) use ($normalizedName, $tokens) {
+                $query->whereRaw('UPPER(name) = ?', [$normalizedName]);
+
+                foreach ($tokens as $token) {
+                    $query->orWhereRaw('UPPER(name) LIKE ?', ['%' . $token . '%']);
+                }
+            })
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'match' => $matches->isNotEmpty(),
+
+            // Admin can see possible matching names.
+            // Encoders only get a warning, not database details.
+            'matches' => $this->isAdmin() ? $matches : [],
+        ]);
     }
 
     public function markGenerated(Cardholder $cardholder): RedirectResponse
     {
+        $this->ensureCanAccessCardholder($cardholder);
+
         return $this->markStatus($cardholder, 'generated', 'generated_at', 'ID marked as generated.');
     }
 
     public function markPrinted(Cardholder $cardholder): RedirectResponse
     {
+        $this->ensureCanAccessCardholder($cardholder);
+
         return $this->markStatus($cardholder, 'printed', 'printed_at', 'ID marked as printed.');
     }
 
     public function markReleased(Cardholder $cardholder): RedirectResponse
     {
+        $this->ensureCanAccessCardholder($cardholder);
+
         return $this->markStatus($cardholder, 'released', 'released_at', 'ID marked as released.');
     }
 
     public function markForCorrection(Cardholder $cardholder): RedirectResponse
     {
+        $this->ensureCanAccessCardholder($cardholder);
+
         $cardholder->update(['status' => 'for_correction']);
 
         AuditLog::create([
@@ -192,6 +287,7 @@ $this->savePhotoIfPresent($request, $cardholder);
             $path = $this->saveCapturedPhoto($request->input('captured_photo'), $cardholder->id_no);
         } elseif ($request->hasFile('photo_upload')) {
             $extension = $request->file('photo_upload')->extension() ?: 'jpg';
+
             $path = $request->file('photo_upload')->storeAs(
                 'cardholder-photos',
                 $cardholder->id_no . '.' . $extension,
@@ -225,9 +321,32 @@ $this->savePhotoIfPresent($request, $cardholder);
         }
 
         $path = 'cardholder-photos/' . $idNo . '.jpg';
+
         Storage::disk(config('filesystems.default'))->put($path, $binary);
 
         return $path;
+    }
+
+    private function generateNextIdNo(): string
+    {
+        $prefix = now()->format('y');
+
+        $latestNumber = Cardholder::query()
+            ->where('id_no', 'like', $prefix . '-%')
+            ->lockForUpdate()
+            ->get(['id_no'])
+            ->map(function (Cardholder $cardholder) {
+                if (preg_match('/^\d{2}-(\d{5})$/', $cardholder->id_no, $matches)) {
+                    return (int) $matches[1];
+                }
+
+                return 0;
+            })
+            ->max();
+
+        $nextNumber = ((int) $latestNumber) + 1;
+
+        return $prefix . '-' . str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
     }
 
     private function statuses(): array
@@ -241,90 +360,17 @@ $this->savePhotoIfPresent($request, $cardholder);
         ];
     }
 
-    private function generateNextIdNo(): string
-{
-    $prefix = now()->format('y');
-
-    $latestNumber = Cardholder::query()
-        ->where('id_no', 'like', $prefix . '-%')
-        ->lockForUpdate()
-        ->get(['id_no'])
-        ->map(function (Cardholder $cardholder) {
-            if (preg_match('/^\d{2}-(\d{5})$/', $cardholder->id_no, $matches)) {
-                return (int) $matches[1];
-            }
-
-            return 0;
-        })
-        ->max();
-
-    $nextNumber = ((int) $latestNumber) + 1;
-
-    return $prefix . '-' . str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
-}
-
-    public function checkName(Request $request): JsonResponse
+    private function isAdmin(): bool
     {
-        $name = trim((string) $request->query('name', ''));
-        $excludeId = $request->integer('exclude');
-
-        if (strlen($name) < 3) {
-            return response()->json([
-                'match' => false,
-                'matches' => [],
-            ]);
-        }
-
-        $normalizedName = strtoupper(preg_replace('/\s+/', ' ', $name));
-        $tokens = collect(explode(' ', $normalizedName))
-            ->filter(fn ($token) => strlen($token) >= 3)
-            ->take(4)
-            ->values();
-
-        $matches = Cardholder::query()
-            ->select('id', 'id_no', 'name')
-            ->when($excludeId, fn ($query) => $query->where('id', '!=', $excludeId))
-            ->where(function ($query) use ($normalizedName, $tokens) {
-                $query->whereRaw('UPPER(name) = ?', [$normalizedName]);
-
-                foreach ($tokens as $token) {
-                    $query->orWhereRaw('UPPER(name) LIKE ?', ['%' . $token . '%']);
-                }
-            })
-            ->limit(5)
-            ->get();
-
-        return response()->json([
-            'match' => $matches->isNotEmpty(),
-            'matches' => $matches,
-        ]);
+        return Auth::user()?->role === 'admin';
     }
 
-    public function destroy(Cardholder $cardholder): RedirectResponse
+    private function ensureCanAccessCardholder(Cardholder $cardholder): void
     {
-        abort_unless(Auth::user()?->role === 'admin', 403);
-
-        $idNo = $cardholder->id_no;
-        $photoPath = $cardholder->photo_path;
-
-        AuditLog::create([
-            'user_id' => Auth::id(),
-            'cardholder_id' => $cardholder->id,
-            'action' => 'cardholder.deleted',
-            'metadata' => [
-                'id_no' => $idNo,
-                'name' => $cardholder->name,
-            ],
-        ]);
-
-        $cardholder->delete();
-
-        if ($photoPath) {
-            Storage::disk(config('filesystems.default'))->delete($photoPath);
+        if ($this->isAdmin()) {
+            return;
         }
 
-        return redirect()
-            ->route('cardholders.index')
-            ->with('success', "Cardholder {$idNo} has been deleted.");
+        abort_unless($cardholder->registered_by === Auth::id(), 403);
     }
 }

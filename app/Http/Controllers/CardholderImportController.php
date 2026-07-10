@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Cardholder;
-use App\Models\CardType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,11 +16,15 @@ class CardholderImportController extends Controller
 {
     public function create(): View
     {
+        abort_unless($this->isAdmin(), 403);
+
         return view('cardholders.import');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless($this->isAdmin(), 403);
+
         $request->validate([
             'csv_file' => ['required', 'file', 'mimes:csv,txt'],
             'photos_zip' => ['nullable', 'file', 'mimes:zip'],
@@ -64,8 +67,6 @@ class CardholderImportController extends Controller
                     continue;
                 }
 
-                $birthday = $this->parseBirthday($this->value($row, 'BIRTHDAY'));
-
                 $data = [
                     'card_type_id' => $request->integer('card_type_id'),
                     'registered_by' => Auth::id(),
@@ -76,7 +77,7 @@ class CardholderImportController extends Controller
                     'cellphone_no' => $this->value($row, 'CELLPHONE NO'),
                     'address' => $this->value($row, 'ADDRESS'),
                     'position' => $this->value($row, 'POSITION'),
-                    'birthday' => $birthday,
+                    'birthday' => $this->parseBirthday($this->value($row, 'BIRTHDAY')),
                     'contact_name' => $this->value($row, 'CONTACT NAME'),
                     'emergency_contact_number' => $this->value($row, 'EMERGENCY CONTACT NUMBER'),
                     'relationship' => $this->value($row, 'RELATIONSHIP'),
@@ -289,5 +290,10 @@ class CardholderImportController extends Controller
         }
 
         return true;
+    }
+
+    private function isAdmin(): bool
+    {
+        return Auth::user()?->role === 'admin';
     }
 }

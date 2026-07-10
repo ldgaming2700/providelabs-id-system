@@ -20,11 +20,16 @@
         input.style.borderColor = '#B91C1C';
         input.style.boxShadow = '0 0 0 3px rgba(185, 28, 28, 0.15)';
 
-        const names = matches
-            .map(match => `${match.name} (${match.id_no})`)
-            .join(', ');
+        if (Array.isArray(matches) && matches.length > 0) {
+            const names = matches
+                .map(match => `${match.name} (${match.id_no})`)
+                .join(', ');
 
-        warning.textContent = `Possible duplicate/similar name found: ${names}`;
+            warning.textContent = `Possible duplicate/similar name found: ${names}`;
+        } else {
+            warning.textContent = 'Possible duplicate/similar name already exists. Please verify before saving.';
+        }
+
         warning.hidden = false;
     }
 

@@ -4,19 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\Cardholder;
 use App\Models\CardType;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function __invoke(): View
     {
+        if (auth()->user()?->role !== 'admin') {
+            return redirect()->route('cardholders.create');
+        }
+
         $totalRecords = Cardholder::count();
 
         $encoderStats = Cardholder::query()
             ->with('encoder')
             ->select('registered_by', DB::raw('COUNT(*) as entries_count'))
-          ->groupBy('registered_by')
+            ->groupBy('registered_by')
             ->orderByDesc('entries_count')
             ->get()
             ->map(function ($row) use ($totalRecords) {
