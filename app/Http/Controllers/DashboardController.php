@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Cardholder;
 use App\Models\CardType;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(): View|RedirectResponse
     {
         if (auth()->user()?->role !== 'admin') {
             return redirect()->route('cardholders.create');
