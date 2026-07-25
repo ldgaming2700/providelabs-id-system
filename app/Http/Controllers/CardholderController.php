@@ -260,23 +260,108 @@ class CardholderController extends Controller
         return back()->with('success', $message);
     }
 
-    private function validatedData(Request $request, ?Cardholder $cardholder = null): array
-    {
-        return $request->validate([
-            'card_type_id' => ['required', 'exists:card_types,id'],
-            'name' => ['required', 'string', 'max:255'],
-            'sc_id' => ['nullable', 'string', 'max:100'],
-            'philhealth' => ['nullable', 'string', 'max:100'],
-            'cellphone_no' => ['nullable', 'string', 'max:50'],
-            'address' => ['nullable', 'string', 'max:1000'],
-            'position' => ['nullable', 'string', 'max:100'],
-            'birthday' => ['nullable', 'date'],
-            'contact_name' => ['nullable', 'string', 'max:255'],
-            'emergency_contact_number' => ['nullable', 'string', 'max:50'],
-            'relationship' => ['nullable', 'string', 'max:100'],
-            'photo_upload' => ['nullable', 'image', 'max:5120'],
-            'captured_photo' => ['nullable', 'string'],
+    private function validatedData(
+        Request $request,
+        ?Cardholder $cardholder = null
+    ): array {
+        $cardType = CardType::findOrFail(
+            $request->integer('card_type_id')
+        );
+
+        $isSangguniangKabataan =
+            $cardType->slug === 'sangguniang-kabataan';
+
+        $data = $request->validate([
+            'card_type_id' => [
+                'required',
+                'exists:card_types,id',
+            ],
+
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'sc_id' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'philhealth' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'cellphone_no' => [
+                'nullable',
+                'string',
+                'max:50',
+            ],
+
+            'address' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'position' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'school' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'birthday' => [
+                'nullable',
+                'date',
+            ],
+
+            'contact_name' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'emergency_contact_number' => [
+                'nullable',
+                'string',
+                'max:50',
+            ],
+
+            'relationship' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'photo_upload' => [
+                'nullable',
+                'image',
+                'max:5120',
+            ],
+
+            'captured_photo' => [
+                'nullable',
+                'string',
+         ],
         ]);
+
+        if ($isSangguniangKabataan) {
+            $data['sc_id'] = null;
+            $data['philhealth'] = null;
+        } else {
+        $data['school'] = null;
+        }
+
+        return $data;
     }
 
     private function savePhotoIfPresent(Request $request, Cardholder $cardholder): void

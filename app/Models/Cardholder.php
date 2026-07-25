@@ -11,7 +11,7 @@ class Cardholder extends Model
 {
     protected $fillable = [
         'card_type_id', 'registered_by', 'id_no', 'name', 'sc_id',
-        'philhealth', 'cellphone_no', 'address', 'position', 'birthday',
+        'philhealth', 'cellphone_no', 'address', 'position', 'school', 'birthday',
         'contact_name', 'emergency_contact_number', 'relationship',
         'photo_path', 'photo_status', 'status', 'generated_at',
         'printed_at', 'released_at',

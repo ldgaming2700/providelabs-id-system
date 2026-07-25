@@ -891,6 +891,23 @@
             'Arial',
             'bold'
         );
+        /*
+            ID number at the same bottom-right position
+            used by the Senior Citizen back.
+        */
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'alphabetic';
+        ctx.font = 'bold 28px Arial';
+        ctx.fillStyle = '#ffffff';
+
+        ctx.fillText(
+            payload.id_no || '',
+            870,
+            610
+        );
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
     }
 
     /*
