@@ -48,4 +48,5 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('cardholders', CardholderController::class);
     require __DIR__.'/admin-cardholders.php';
+    require __DIR__.'/admin-cardholder-print.php';
 });

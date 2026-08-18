@@ -96,6 +96,14 @@
             background: #15803d;
         }
 
+        .btn.front {
+            background: #7c3aed;
+        }
+
+        .btn.back {
+            background: #be123c;
+        }
+
         .btn.light {
             background: #e2e8f0;
             color: #172033;
@@ -171,6 +179,12 @@
             font-weight: 700;
         }
 
+        .separator {
+            width: 1px;
+            height: 32px;
+            background: #cbd5e1;
+        }
+
         .pagination {
             margin-top: 16px;
         }
@@ -184,6 +198,10 @@
             .filters > *,
             .batch-bar > * {
                 width: 100%;
+            }
+
+            .separator {
+                display: none;
             }
         }
     </style>
@@ -218,7 +236,7 @@
 
     @if ($errors->any())
         <div class="alert error">
-            <strong>The batch update could not be completed.</strong>
+            <strong>The requested action could not be completed.</strong>
             <ul>
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -311,7 +329,7 @@
         <form
             method="POST"
             action="{{ route('admin.cardholders.batch-status') }}"
-            id="batch-status-form"
+            id="batch-cardholder-form"
         >
             @csrf
 
@@ -321,7 +339,7 @@
                     <span id="selected-count">0</span>
                 </span>
 
-                <select name="status" required>
+                <select name="status" id="batch-status">
                     <option value="">Change status to...</option>
 
                     @foreach ($statusOptions as $value => $label)
@@ -331,8 +349,34 @@
                     @endforeach
                 </select>
 
-                <button type="submit" class="btn secondary">
-                    Apply to Selected
+                <button
+                    type="submit"
+                    class="btn secondary"
+                    id="batch-status-button"
+                >
+                    Apply Status
+                </button>
+
+                <span class="separator" aria-hidden="true"></span>
+
+                <button
+                    type="submit"
+                    class="btn front"
+                    formaction="{{ route('admin.cardholders.batch-print', ['side' => 'front']) }}"
+                    formmethod="POST"
+                    data-print-side="front"
+                >
+                    Generate Selected Front IDs
+                </button>
+
+                <button
+                    type="submit"
+                    class="btn back"
+                    formaction="{{ route('admin.cardholders.batch-print', ['side' => 'back']) }}"
+                    formmethod="POST"
+                    data-print-side="back"
+                >
+                    Generate Selected Back IDs
                 </button>
             </div>
 
@@ -405,9 +449,7 @@
                                 >
                             </td>
 
-                            <td>
-                                {{ $cardholder->id_no }}
-                            </td>
+                            <td>{{ $cardholder->id_no }}</td>
 
                             <td>
                                 <strong>{{ $cardholder->name }}</strong>
@@ -480,7 +522,7 @@
 <script>
 (function () {
     const form =
-        document.getElementById('batch-status-form');
+        document.getElementById('batch-cardholder-form');
 
     const selectAll =
         document.getElementById('select-all');
@@ -493,11 +535,17 @@
     const selectedCount =
         document.getElementById('selected-count');
 
+    const statusSelect =
+        document.getElementById('batch-status');
+
+    function selectedTotal() {
+        return checkboxes.filter(
+            (checkbox) => checkbox.checked
+        ).length;
+    }
+
     function refreshCount() {
-        const selected =
-            checkboxes.filter(
-                (checkbox) => checkbox.checked
-            ).length;
+        const selected = selectedTotal();
 
         selectedCount.textContent = selected;
 
@@ -536,15 +584,8 @@
         form.addEventListener(
             'submit',
             function (event) {
-                const selected =
-                    checkboxes.filter(
-                        (checkbox) => checkbox.checked
-                    ).length;
-
-                const status =
-                    form.querySelector(
-                        'select[name="status"]'
-                    );
+                const selected = selectedTotal();
+                const submitter = event.submitter;
 
                 if (selected === 0) {
                     event.preventDefault();
@@ -556,7 +597,14 @@
                     return;
                 }
 
-                if (!status || !status.value) {
+                const printSide =
+                    submitter?.dataset?.printSide;
+
+                if (printSide) {
+                    return;
+                }
+
+                if (!statusSelect || !statusSelect.value) {
                     event.preventDefault();
 
                     alert(
