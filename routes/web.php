@@ -47,4 +47,5 @@ Route::middleware('auth')->group(function () {
         ->name('cardholders.mark-for-correction');
 
     Route::resource('cardholders', CardholderController::class);
+    require __DIR__.'/admin-cardholders.php';
 });
